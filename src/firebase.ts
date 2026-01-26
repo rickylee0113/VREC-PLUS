@@ -10,10 +10,11 @@ import {
   User as FirebaseUser 
 } from 'firebase/auth';
 
-// 安全地取得環境變數，若 import.meta.env 為 undefined 則使用空物件避免崩潰
+// 安全地取得環境變數
 const meta = import.meta as any;
 const env = meta.env || {};
 
+// 使用環境變數，而非硬編碼的金鑰
 const firebaseConfig = {
   apiKey: env.VITE_FIREBASE_API_KEY,
   authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -28,16 +29,14 @@ let authInstance: any;
 let provider: any;
 
 try {
-  // 檢查是否有 API Key
   if (!firebaseConfig.apiKey) {
-    console.warn("Firebase API Key 尚未設定或無法讀取，請檢查 .env 檔案與啟動方式");
+    console.warn("⚠️ Firebase API Key 尚未設定！請檢查您的 .env 檔案內容是否正確。");
   }
 
   app = initializeApp(firebaseConfig);
   authInstance = getAuth(app);
   provider = new GoogleAuthProvider();
   
-  // 設定登入狀態持久化
   setPersistence(authInstance, browserLocalPersistence).catch((err) => {
     console.warn("Firebase Auth persistence setup failed:", err);
   });
@@ -54,7 +53,7 @@ export const googleProvider = provider;
 
 export const signInWithPopup = async (auth: any, provider: any) => {
   if (!auth) {
-    alert("Firebase 初始化失敗，無法登入。\n請檢查 .env 設定檔是否正確，或是否直接開啟了 HTML 檔案 (需使用 Web Server)。");
+    alert("Firebase 初始化失敗，無法登入。\n請檢查 .env 設定檔是否正確。");
     return;
   }
 
@@ -68,7 +67,7 @@ export const signInWithPopup = async (auth: any, provider: any) => {
   } catch (error: any) {
     console.error("登入錯誤 Details:", error);
     if (error.code === 'auth/operation-not-supported-in-this-environment') {
-        alert("登入失敗：環境不支援。\n請確認您使用的是 http:// 或 https:// 協定 (不要用 file://)，且瀏覽器未封鎖第三方 Cookie。");
+        alert("登入失敗：環境不支援。\n請確認您使用的是 http:// 或 https:// 協定 (不要用 file://)。");
     } else if (error.code === 'auth/unauthorized-domain') {
         alert(`登入失敗：網域未授權。\n目前的網域是: ${window.location.hostname}\n請前往 Firebase Console -> Authentication -> Settings -> Authorized domains 將其加入。`);
     } else if (error.code === 'auth/popup-closed-by-user') {
