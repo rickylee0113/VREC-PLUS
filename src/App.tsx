@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Users, Play, RotateCcw, Save, Upload, FileJson, 
@@ -15,6 +16,8 @@ import {
 import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, User } from './firebase';
 
 // --- Constants ---
+
+export const STORAGE_KEY = 'volleyTagData_Pro_v1'; 
 
 const POSITIONS: Zone[] = [4, 3, 2, 5, 6, 1]; 
 const AWAY_POSITIONS: Zone[] = [5, 6, 1, 4, 3, 2]; 
@@ -43,7 +46,7 @@ const SKILLS: { id: SkillType; label: string; color: string }[] = [
   { id: 'Dig', label: '防守', color: 'bg-emerald-600' },
   { id: 'Freeball', label: '修正', color: 'bg-cyan-600' },
   { id: 'Fault', label: '失誤', color: 'bg-slate-600' },
-  { id: 'Substitution', label: '換人', color: 'bg-slate-500' },
+  // Substitution removed from here
 ];
 
 const GRADES: { id: GradeType; label: string; color: string }[] = [
@@ -54,22 +57,32 @@ const GRADES: { id: GradeType; label: string; color: string }[] = [
   { id: '=', label: '失誤', color: 'bg-red-100 text-red-800 border-red-300' },
 ];
 
-const ATTACK_SUBTYPES: {id: SkillSubType, label: string, color: string}[] = [
-    {id: 'Open', label: '長攻', color: 'bg-red-500'}, 
-    {id: 'QuickA', label: 'A快 (前快)', color: 'bg-orange-500'}, 
-    {id: 'QuickB', label: 'B快 (前長)', color: 'bg-orange-500'},
-    {id: 'QuickC', label: 'C快 (背快)', color: 'bg-orange-500'}, 
-    {id: 'BackRow', label: '後排', color: 'bg-rose-500'}, 
-    {id: 'Tip', label: '吊球', color: 'bg-pink-500'},
-    {id: 'Tool', label: '打手', color: 'bg-red-400'}
+// Layout Note: These are interleaved to display correctly in a 2-column grid (Left-Right, Left-Right)
+// Left Column (Orange): QuickA, QuickB, QuickC, Slide
+// Right Column (Blue): Open, BackRow, TimeDiff, Tool, Tip
+const ATTACK_SUBTYPES: {id: string, label: string, color: string}[] = [
+    {id: 'QuickA', label: 'A快 (前快)', color: 'bg-orange-600'}, 
+    {id: 'Open', label: '長攻', color: 'bg-blue-600'}, 
+    
+    {id: 'QuickB', label: 'B快 (前長)', color: 'bg-orange-600'},
+    {id: 'BackRow', label: '後排', color: 'bg-blue-600'}, 
+    
+    {id: 'QuickC', label: 'C快 (背快)', color: 'bg-orange-600'}, 
+    {id: 'TimeDiff', label: '時間差', color: 'bg-blue-600'},
+
+    {id: 'Slide', label: '背飛', color: 'bg-orange-600'},
+    {id: 'Tool', label: '打手', color: 'bg-blue-600'},
+
+    {id: 'Spacer', label: '', color: 'transparent'}, // Spacer
+    {id: 'Tip', label: '吊球', color: 'bg-blue-600'},
 ];
 
-const SERVE_SUBTYPES: {id: SkillSubType, label: string, color: string}[] = [
+const SERVE_SUBTYPES: {id: string, label: string, color: string}[] = [
     {id: 'Float', label: '飄球', color: 'bg-sky-500'}, 
     {id: 'Spin', label: '強發', color: 'bg-blue-700'}
 ];
 
-const FAULT_SUBTYPES: {id: SkillSubType, label: string, color: string}[] = [
+const FAULT_SUBTYPES: {id: string, label: string, color: string}[] = [
     {id: 'NetTouch', label: '觸網', color: 'bg-slate-500'}, 
     {id: 'DoubleHit', label: '連擊', color: 'bg-slate-500'}, 
     {id: 'Violation', label: '違例', color: 'bg-slate-500'},
@@ -78,12 +91,21 @@ const FAULT_SUBTYPES: {id: SkillSubType, label: string, color: string}[] = [
     {id: 'Rotation', label: '輪轉', color: 'bg-slate-500'}
 ];
 
-const SET_SUBTYPES: {id: SkillSubType, label: string, color: string}[] = [
-    {id: 'SetA', label: 'A快 (前快)', color: 'bg-yellow-600'},
-    {id: 'SetB', label: 'B快 (前長)', color: 'bg-yellow-600'},
-    {id: 'SetC', label: 'C快 (背快)', color: 'bg-yellow-600'},
-    {id: 'SetOpen', label: '長攻', color: 'bg-yellow-500'},
-    {id: 'SetSlide', label: '背飛', color: 'bg-amber-500'}
+// Layout Note: Interleaved for 2 columns (Left, Right, Left, Right...)
+// Left Column (Orange): SetA, SetB, SetC, SetterDump (Purple)
+// Right Column (Blue): SetOpen, SetBackOpen, SetSlide, BackRow
+const SET_SUBTYPES: {id: string, label: string, color: string}[] = [
+    {id: 'SetA', label: 'A快 (前快)', color: 'bg-orange-600'},
+    {id: 'SetOpen', label: '長攻', color: 'bg-blue-600'},
+
+    {id: 'SetB', label: 'B快 (前長)', color: 'bg-orange-600'},
+    {id: 'SetBackOpen', label: '背長', color: 'bg-blue-600'},
+
+    {id: 'SetC', label: 'C快 (背快)', color: 'bg-orange-600'},
+    {id: 'SetSlide', label: '背飛', color: 'bg-blue-600'},
+    
+    {id: 'SetterDump', label: '二攻', color: 'bg-purple-600'}, // Purple for Setter Dump
+    {id: 'BackRow', label: '後排', color: 'bg-blue-600'},
 ];
 
 const TAGS: { id: string; label: string; color: string }[] = [
@@ -804,7 +826,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore }: any) => {
     );
 };
 
-export const STORAGE_KEY = 'volleyTagData_Base2'; 
+// --- VolleyTagApp (Main Component) ---
 
 const VolleyTagApp: React.FC<{ onResetApp: () => void, user: User, onLogout: () => void }> = ({ onResetApp, user, onLogout }) => {
   const [phase, setPhase] = useState<'setup' | 'lineup' | 'recording' | 'stats'>('setup');
@@ -2095,8 +2117,9 @@ const VolleyTagApp: React.FC<{ onResetApp: () => void, user: User, onLogout: () 
                                     {(pendingEvent.skill === 'Attack' ? ATTACK_SUBTYPES : 
                                       pendingEvent.skill === 'Serve' ? SERVE_SUBTYPES : 
                                       pendingEvent.skill === 'Set' ? SET_SUBTYPES : 
-                                      FAULT_SUBTYPES).map(t => (
-                                        <button key={t.id} onClick={()=>setPendingEvent(p=>({...p, subType: t.id}))} className={`h-11 font-black rounded shadow-sm text-lg text-white ${t.color} ${pendingEvent.subType===t.id ? 'ring-4 ring-offset-1 ring-slate-800' : 'opacity-90'}`}>{t.label}</button>
+                                      FAULT_SUBTYPES).map((t, idx) => (
+                                        t.id === 'Spacer' ? <div key={`spacer-${idx}`} className="h-11" /> :
+                                        <button key={t.id} onClick={()=>setPendingEvent(p=>({...p, subType: t.id as SkillSubType}))} className={`h-11 font-black rounded shadow-sm text-lg text-white ${t.color} ${pendingEvent.subType===t.id ? 'ring-4 ring-offset-1 ring-slate-800' : 'opacity-90'}`}>{t.label}</button>
                                     ))}
                                 </div>
                             </>

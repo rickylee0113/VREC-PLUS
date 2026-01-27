@@ -18,7 +18,7 @@ export interface Team {
 
 export type SkillType = 'Serve' | 'Receive' | 'Set' | 'Attack' | 'Block' | 'Dig' | 'Freeball' | 'Fault' | 'Substitution';
 
-export type SkillSubType = 'QuickA' | 'QuickB' | 'QuickC' | 'Open' | 'BackRow' | 'Tip' | 'Tool' | 'Float' | 'Spin' | 'NetTouch' | 'DoubleHit' | 'Violation' | 'Out' | 'Carry' | 'Rotation' | 'SetA' | 'SetB' | 'SetC' | 'SetOpen' | 'SetSlide';
+export type SkillSubType = 'QuickA' | 'QuickB' | 'QuickC' | 'Open' | 'BackRow' | 'Tip' | 'Tool' | 'TimeDiff' | 'SetterDump' | 'Slide' | 'Float' | 'Spin' | 'NetTouch' | 'DoubleHit' | 'Violation' | 'Out' | 'Carry' | 'Rotation' | 'SetA' | 'SetB' | 'SetC' | 'SetOpen' | 'SetBackOpen' | 'SetSlide';
 
 export type GradeType = '#' | '+' | '!' | '-' | '=';
 
