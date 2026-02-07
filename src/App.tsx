@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
-  Users, Play, RotateCcw, Save, Upload, FileJson, 
-  ChevronLeft, ChevronRight, BarChart2, Video, 
-  Eraser, Download, PieChart, Activity, AlertTriangle, Plus, Trash2, FileText, Zap, Dna, ClipboardList, Printer, Pencil, X, FolderHeart, RefreshCw, CheckCircle, Lock, ScrollText, LogOut, UserCircle
+  Users, Play, RotateCcw, Save, Upload, 
+  ChevronLeft, ChevronRight, BarChart2, 
+  Eraser, Download, Activity, AlertTriangle, Plus, Trash2, FileText, Zap, ClipboardList, Printer, Pencil, X, FolderHeart, CheckCircle, Lock, ScrollText, LogOut, Minus
 } from 'lucide-react';
 import VideoPlayer from './components/VideoPlayer';
 import CourtMap from './components/CourtMap';
@@ -11,16 +11,13 @@ import {
   Team, Player, MatchMetadata, Lineup, TagEvent, 
   Zone, SkillType, ResultType, PlayerRole, TeamSide, 
   Coordinate, GradeType, SkillSubType 
-} from '../types';
+} from './types';
 
-import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, User } from './firebase';
+import { User } from './firebase';
 
 // --- Constants ---
 
 export const STORAGE_KEY = 'volleyTagData_Pro_v1'; 
-
-const POSITIONS: Zone[] = [4, 3, 2, 5, 6, 1]; 
-const AWAY_POSITIONS: Zone[] = [5, 6, 1, 4, 3, 2]; 
 
 const ROLES: { id: PlayerRole; label: string }[] = [
   { id: 'OH', label: '大砲 (OH)' },
@@ -46,7 +43,6 @@ const SKILLS: { id: SkillType; label: string; color: string }[] = [
   { id: 'Dig', label: '防守', color: 'bg-emerald-600' },
   { id: 'Freeball', label: '修正', color: 'bg-cyan-600' },
   { id: 'Fault', label: '失誤', color: 'bg-slate-600' },
-  // Substitution removed from here
 ];
 
 const GRADES: { id: GradeType; label: string; color: string }[] = [
@@ -57,23 +53,16 @@ const GRADES: { id: GradeType; label: string; color: string }[] = [
   { id: '=', label: '失誤', color: 'bg-red-100 text-red-800 border-red-300' },
 ];
 
-// Layout Note: These are interleaved to display correctly in a 2-column grid (Left-Right, Left-Right)
-// Left Column (Orange): QuickA, QuickB, QuickC, Slide
-// Right Column (Blue): Open, BackRow, TimeDiff, Tool, Tip
 const ATTACK_SUBTYPES: {id: string, label: string, color: string}[] = [
     {id: 'QuickA', label: 'A快 (前快)', color: 'bg-orange-600'}, 
     {id: 'Open', label: '長攻', color: 'bg-blue-600'}, 
-    
     {id: 'QuickB', label: 'B快 (前長)', color: 'bg-orange-600'},
     {id: 'BackRow', label: '後排', color: 'bg-blue-600'}, 
-    
     {id: 'QuickC', label: 'C快 (背快)', color: 'bg-orange-600'}, 
     {id: 'TimeDiff', label: '時間差', color: 'bg-blue-600'},
-
     {id: 'Slide', label: '背飛', color: 'bg-orange-600'},
     {id: 'Tool', label: '打手', color: 'bg-blue-600'},
-
-    {id: 'Spacer', label: '', color: 'transparent'}, // Spacer
+    {id: 'Spacer', label: '', color: 'transparent'}, 
     {id: 'Tip', label: '吊球', color: 'bg-blue-600'},
 ];
 
@@ -91,20 +80,14 @@ const FAULT_SUBTYPES: {id: string, label: string, color: string}[] = [
     {id: 'Rotation', label: '輪轉', color: 'bg-slate-500'}
 ];
 
-// Layout Note: Interleaved for 2 columns (Left, Right, Left, Right...)
-// Left Column (Orange): SetA, SetB, SetC, SetterDump (Purple)
-// Right Column (Blue): SetOpen, SetBackOpen, SetSlide, BackRow
 const SET_SUBTYPES: {id: string, label: string, color: string}[] = [
     {id: 'SetA', label: 'A快 (前快)', color: 'bg-orange-600'},
     {id: 'SetOpen', label: '長攻', color: 'bg-blue-600'},
-
     {id: 'SetB', label: 'B快 (前長)', color: 'bg-orange-600'},
     {id: 'SetBackOpen', label: '背長', color: 'bg-blue-600'},
-
     {id: 'SetC', label: 'C快 (背快)', color: 'bg-orange-600'},
     {id: 'SetSlide', label: '背飛', color: 'bg-blue-600'},
-    
-    {id: 'SetterDump', label: '二攻', color: 'bg-purple-600'}, // Purple for Setter Dump
+    {id: 'SetterDump', label: '二攻', color: 'bg-purple-600'}, 
     {id: 'BackRow', label: '後排', color: 'bg-blue-600'},
 ];
 
@@ -320,9 +303,9 @@ const MapLegend = () => (
     </div>
 );
 
-// --- Stats Dashboard (Full Feature) ---
+// --- Stats Dashboard ---
 
-const StatsDashboard = ({ metadata, events, onClose, currentScore }: any) => {
+const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any) => {
     const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
     const [selectedTeam, setSelectedTeam] = useState<TeamSide | null>(null);
     const [viewMode, setViewMode] = useState<'MatchSummary' | 'TeamStats' | 'PlayerStats' | 'MatchReport'>('MatchSummary');
@@ -811,16 +794,21 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore }: any) => {
                     )}
                 </div>
 
-                {/* Right Roster (Away) */}
-                <div className="w-64 bg-white border-l flex flex-col overflow-y-auto">
-                    <button onClick={() => setSelectedTeam('Away')} className={`p-4 font-black text-lg border-b text-center hover:bg-red-50 ${selectedTeam === 'Away' ? 'bg-red-100 text-red-800' : 'text-red-600'}`}>{metadata.awayTeam.name}</button>
-                    {metadata.awayTeam.roster.map((p: Player) => (
-                        <button key={p.id} onClick={() => setSelectedPlayerId(p.id)} className={`p-3 border-b flex items-center gap-3 hover:bg-slate-50 ${selectedPlayerId === p.id ? 'bg-red-50 border-l-4 border-l-red-500' : ''}`}>
-                            <span className="w-8 h-8 rounded bg-red-600 text-white flex items-center justify-center font-bold text-sm">{p.number}</span>
-                            <span className="font-bold text-slate-700 text-sm truncate">{p.name}</span>
-                        </button>
-                    ))}
-                </div>
+                {/* Right Roster (Away) - Responsive Width */}
+                <div className="w-20 md:w-48 lg:w-56 xl:w-80 bg-white border-l flex flex-col shrink-0 transition-all duration-300">
+                     <h3 className="p-3 lg:p-4 font-black text-lg lg:text-xl bg-red-100 text-red-800 border-b border-red-200 text-center truncate">{metadata.awayTeam.name}</h3>
+                     <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
+                        {metadata.awayTeam.roster.map(p => {
+                            const isUsed = (Object.values(lineup.away) as (Player|null)[]).some(lp => lp?.id === p.id);
+                            return (
+                                <div key={p.id} className={`p-1.5 lg:p-2 rounded flex items-center gap-2 lg:gap-4 border h-11 lg:h-14 ${isUsed ? 'opacity-40 bg-slate-100' : 'bg-white border-red-100'}`}>
+                                    <div className="w-8 h-8 lg:w-10 lg:h-10 rounded bg-red-600 text-white flex items-center justify-center font-black shrink-0 text-base lg:text-xl">{p.number}</div>
+                                    <div className="font-bold text-slate-700 truncate text-sm lg:text-xl flex-1 hidden md:block">{p.name}</div>
+                                </div>
+                            );
+                        })}
+                     </div>
+                 </div>
             </div>
         </div>
     );
@@ -830,6 +818,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore }: any) => {
 
 const VolleyTagApp: React.FC<{ onResetApp: () => void, user: User, onLogout: () => void }> = ({ onResetApp, user, onLogout }) => {
   const [phase, setPhase] = useState<'setup' | 'lineup' | 'recording' | 'stats'>('setup');
+  const [zoomLevel, setZoomLevel] = useState(1.0);
   
   // State
   const [currentTime, setCurrentTime] = useState(0);
@@ -881,6 +870,10 @@ const VolleyTagApp: React.FC<{ onResetApp: () => void, user: User, onLogout: () 
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // --- Zoom Handlers ---
+  const handleZoomIn = () => setZoomLevel(prev => Math.min(1.5, prev + 0.1));
+  const handleZoomOut = () => setZoomLevel(prev => Math.max(0.5, prev - 0.1));
 
   // --- HOISTED: Defined BEFORE usage in commitEvent ---
   const handleRotate = (teamSide: TeamSide) => {
@@ -1581,7 +1574,7 @@ const VolleyTagApp: React.FC<{ onResetApp: () => void, user: User, onLogout: () 
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans h-screen overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans h-screen overflow-hidden" style={{ zoom: zoomLevel }}>
       {notification && <Toast message={notification} onClose={() => setNotification(null)} />}
       {showSubModal && <SubstitutionModal team={subTeam} lineup={lineup} metadata={metadata} onClose={()=>setShowSubModal(false)} onConfirm={handleSubstitution} />}
       {showLogModal && <LogModal events={events} metadata={metadata} onClose={() => setShowLogModal(false)} onDelete={handleDeleteEvent} />}
@@ -1603,6 +1596,16 @@ const VolleyTagApp: React.FC<{ onResetApp: () => void, user: User, onLogout: () 
              )}
         </div>
         <div className="flex gap-3 items-center">
+             {/* Zoom Controls */}
+             <div className="flex items-center bg-slate-800 rounded-lg px-2 py-1.5 border border-slate-700 gap-3">
+                <span className="text-xs font-bold text-slate-400 whitespace-nowrap">螢幕縮放</span>
+                <div className="flex items-center gap-2">
+                    <button onClick={handleZoomOut} className="p-1 hover:bg-slate-700 rounded-md transition-colors text-slate-300"><Minus size={14} /></button>
+                    <span className="text-xs font-mono font-bold w-10 text-center">{Math.round(zoomLevel * 100)}%</span>
+                    <button onClick={handleZoomIn} className="p-1 hover:bg-slate-700 rounded-md transition-colors text-slate-300"><Plus size={14} /></button>
+                </div>
+             </div>
+
              <button onClick={exportJSON} className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded font-bold text-sm"><Save size={16} /> 備份</button>
              {phase !== 'setup' && phase !== 'lineup' && <button onClick={exportCSV} className="flex items-center gap-2 bg-green-700 hover:bg-green-600 px-4 py-2 rounded font-bold text-sm"><Download size={16} /> CSV</button>}
              <button onClick={() => setResetModalOpen(true)} className="flex items-center gap-2 bg-red-600 hover:bg-red-50 px-4 py-2 rounded font-bold text-sm"><RotateCcw size={16} /> 開新比賽</button>
