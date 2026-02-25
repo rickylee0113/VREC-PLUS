@@ -309,6 +309,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
     const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
     const [selectedTeam, setSelectedTeam] = useState<TeamSide | null>(null);
     const [viewMode, setViewMode] = useState<'MatchSummary' | 'TeamStats' | 'PlayerStats' | 'MatchReport'>('MatchSummary');
+    const [showGrid, setShowGrid] = useState(true);
 
     useEffect(() => {
         if (selectedPlayerId) {
@@ -399,7 +400,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
         const skillEvents = sourceEvents.filter((e: TagEvent) => e.skill === skill);
         
         const points = skillEvents
-            .filter(e => e.endCoordinate && !e.startCoordinate)
+            .filter(e => e.endCoordinate)
             .map(e => ({ ...e.endCoordinate!, result: e.result, skill: e.skill })); // Add skill
             
         const trajectories = skillEvents
@@ -528,6 +529,11 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
             <div className="bg-slate-900 text-white p-4 flex justify-between items-center shadow-md">
                 <h2 className="text-xl font-bold flex items-center gap-2"><BarChart2 /> 數據分析儀表板</h2>
                 <div className="flex gap-4">
+                    {viewMode !== 'MatchReport' && (
+                        <button onClick={() => setShowGrid(!showGrid)} className={`px-4 py-2 rounded font-bold text-sm ${showGrid ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
+                            {showGrid ? '顯示落點 (Points)' : '顯示網格 (Grid %)'}
+                        </button>
+                    )}
                     <button onClick={() => { setSelectedPlayerId(null); setSelectedTeam(null); setViewMode('MatchReport'); }} className={`px-4 py-2 rounded font-bold text-sm ${viewMode === 'MatchReport' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}><span className="flex items-center gap-1"><ClipboardList size={16}/> 賽後報告</span></button>
                     <button onClick={() => { setSelectedPlayerId(null); setSelectedTeam(null); setViewMode('MatchSummary'); }} className={`px-4 py-2 rounded font-bold text-sm ${viewMode === 'MatchSummary' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>比賽總結</button>
                     <button onClick={onClose} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded font-bold text-sm">返回比賽</button>
@@ -655,7 +661,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
                                         <button onClick={() => handlePrint(`${metadata.homeTeam.name} 攻擊熱區`, 'summary-heatmap-home', calculateStats(events.filter(e => e.team === 'Home')))} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="列印熱區"><Printer size={20}/></button>
                                     </div>
                                     <div id="summary-heatmap-home" className="flex-1 border-4 border-slate-300 rounded-xl overflow-hidden bg-orange-50 relative">
-                                        <CourtMap label="" trajectoryMode={false} compact heatmapPoints={getHeatmapData('Attack', 'Home').points} trajectories={getHeatmapData('Attack', 'Home').trajectories} netPosition="center" watermark={metadata.homeTeam.name} topWatermark={metadata.awayTeam.name} bottomWatermark={metadata.homeTeam.name} />
+                                        <CourtMap label="" gridMode={showGrid} trajectoryMode={false} compact heatmapPoints={getHeatmapData('Attack', 'Home').points} trajectories={getHeatmapData('Attack', 'Home').trajectories} netPosition="center" watermark={metadata.homeTeam.name} topWatermark={metadata.awayTeam.name} bottomWatermark={metadata.homeTeam.name} />
                                     </div>
                                 </div>
                                 <div className="bg-white p-4 rounded-xl shadow-sm flex flex-col h-[600px]">
@@ -664,7 +670,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
                                         <button onClick={() => handlePrint(`${metadata.awayTeam.name} 攻擊熱區`, 'summary-heatmap-away', calculateStats(events.filter(e => e.team === 'Away')))} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="列印熱區"><Printer size={20}/></button>
                                     </div>
                                     <div id="summary-heatmap-away" className="flex-1 border-4 border-slate-300 rounded-xl overflow-hidden bg-orange-50 relative">
-                                        <CourtMap label="" trajectoryMode={false} compact heatmapPoints={getHeatmapData('Attack', 'Away').points} trajectories={getHeatmapData('Attack', 'Away').trajectories} netPosition="center" watermark={metadata.awayTeam.name} topWatermark={metadata.homeTeam.name} bottomWatermark={metadata.awayTeam.name} />
+                                        <CourtMap label="" gridMode={showGrid} trajectoryMode={false} compact heatmapPoints={getHeatmapData('Attack', 'Away').points} trajectories={getHeatmapData('Attack', 'Away').trajectories} netPosition="center" watermark={metadata.awayTeam.name} topWatermark={metadata.homeTeam.name} bottomWatermark={metadata.awayTeam.name} />
                                     </div>
                                 </div>
                                 {/* Receive Map Home */}
@@ -674,7 +680,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
                                         <button onClick={() => handlePrint(`${metadata.homeTeam.name} 接發球路線`, 'summary-heatmap-receive-home', calculateStats(events.filter(e => e.team === 'Home')))} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="列印熱區"><Printer size={20}/></button>
                                     </div>
                                     <div id="summary-heatmap-receive-home" className="flex-1 border-4 border-slate-300 rounded-xl overflow-hidden bg-orange-50 relative">
-                                        <CourtMap label="" trajectoryMode={false} compact heatmapPoints={getHeatmapData('Receive', 'Home').points} trajectories={getHeatmapData('Receive', 'Home').trajectories} netPosition="center" watermark={metadata.homeTeam.name} topWatermark={metadata.awayTeam.name} bottomWatermark={metadata.homeTeam.name} />
+                                        <CourtMap label="" gridMode={showGrid} trajectoryMode={false} compact heatmapPoints={getHeatmapData('Receive', 'Home').points} trajectories={getHeatmapData('Receive', 'Home').trajectories} netPosition="center" watermark={metadata.homeTeam.name} topWatermark={metadata.awayTeam.name} bottomWatermark={metadata.homeTeam.name} />
                                     </div>
                                 </div>
                                  {/* Receive Map Away */}
@@ -684,7 +690,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
                                         <button onClick={() => handlePrint(`${metadata.awayTeam.name} 接發球路線`, 'summary-heatmap-receive-away', calculateStats(events.filter(e => e.team === 'Away')))} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="列印熱區"><Printer size={20}/></button>
                                     </div>
                                     <div id="summary-heatmap-receive-away" className="flex-1 border-4 border-slate-300 rounded-xl overflow-hidden bg-orange-50 relative">
-                                        <CourtMap label="" trajectoryMode={false} compact heatmapPoints={getHeatmapData('Receive', 'Away').points} trajectories={getHeatmapData('Receive', 'Away').trajectories} netPosition="center" watermark={metadata.awayTeam.name} topWatermark={metadata.homeTeam.name} bottomWatermark={metadata.awayTeam.name} />
+                                        <CourtMap label="" gridMode={showGrid} trajectoryMode={false} compact heatmapPoints={getHeatmapData('Receive', 'Away').points} trajectories={getHeatmapData('Receive', 'Away').trajectories} netPosition="center" watermark={metadata.awayTeam.name} topWatermark={metadata.homeTeam.name} bottomWatermark={metadata.awayTeam.name} />
                                     </div>
                                 </div>
                             </div>
@@ -757,7 +763,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
                                         }} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="列印熱區"><Printer size={20}/></button>
                                     </div>
                                     <div id="single-heatmap-serve" className="flex-1 border-4 border-slate-300 rounded-xl overflow-hidden bg-orange-50 relative">
-                                        <CourtMap label="" trajectoryMode={false} compact heatmapPoints={getHeatmapData('Serve').points} trajectories={getHeatmapData('Serve').trajectories} netPosition="center" watermark={activeTeamName} topWatermark={selectedTeam === 'Home' ? metadata.awayTeam.name : metadata.homeTeam.name} bottomWatermark={activeTeamName} />
+                                        <CourtMap label="" gridMode={showGrid} trajectoryMode={false} compact heatmapPoints={getHeatmapData('Serve').points} trajectories={getHeatmapData('Serve').trajectories} netPosition="center" watermark={activeTeamName} topWatermark={selectedTeam === 'Home' ? metadata.awayTeam.name : metadata.homeTeam.name} bottomWatermark={activeTeamName} />
                                     </div>
                                 </div>
                                 <div className="bg-white p-4 rounded-xl shadow-sm flex flex-col h-[600px]">
@@ -771,7 +777,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
                                         }} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="列印熱區"><Printer size={20}/></button>
                                     </div>
                                     <div id="single-heatmap-attack" className="flex-1 border-4 border-slate-300 rounded-xl overflow-hidden bg-orange-50 relative">
-                                        <CourtMap label="" trajectoryMode={false} compact heatmapPoints={getHeatmapData('Attack').points} trajectories={getHeatmapData('Attack').trajectories} netPosition="center" watermark={activeTeamName} topWatermark={selectedTeam === 'Home' ? metadata.awayTeam.name : metadata.homeTeam.name} bottomWatermark={activeTeamName} />
+                                        <CourtMap label="" gridMode={showGrid} trajectoryMode={false} compact heatmapPoints={getHeatmapData('Attack').points} trajectories={getHeatmapData('Attack').trajectories} netPosition="center" watermark={activeTeamName} topWatermark={selectedTeam === 'Home' ? metadata.awayTeam.name : metadata.homeTeam.name} bottomWatermark={activeTeamName} />
                                     </div>
                                 </div>
                                 {/* Receive Map Single */}
@@ -786,7 +792,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
                                         }} className="p-1 hover:bg-slate-100 rounded text-slate-500" title="列印熱區"><Printer size={20}/></button>
                                     </div>
                                     <div id="single-heatmap-receive" className="flex-1 border-4 border-slate-300 rounded-xl overflow-hidden bg-orange-50 relative">
-                                        <CourtMap label="" trajectoryMode={false} compact heatmapPoints={getHeatmapData('Receive').points} trajectories={getHeatmapData('Receive').trajectories} netPosition="center" watermark={activeTeamName} topWatermark={selectedTeam === 'Home' ? metadata.awayTeam.name : metadata.homeTeam.name} bottomWatermark={activeTeamName} />
+                                        <CourtMap label="" gridMode={showGrid} trajectoryMode={false} compact heatmapPoints={getHeatmapData('Receive').points} trajectories={getHeatmapData('Receive').trajectories} netPosition="center" watermark={activeTeamName} topWatermark={selectedTeam === 'Home' ? metadata.awayTeam.name : metadata.homeTeam.name} bottomWatermark={activeTeamName} />
                                     </div>
                                 </div>
                              </div>
@@ -796,17 +802,14 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
 
                 {/* Right Roster (Away) - Responsive Width */}
                 <div className="w-20 md:w-48 lg:w-56 xl:w-80 bg-white border-l flex flex-col shrink-0 transition-all duration-300">
-                     <h3 className="p-3 lg:p-4 font-black text-lg lg:text-xl bg-red-100 text-red-800 border-b border-red-200 text-center truncate">{metadata.awayTeam.name}</h3>
+                     <button onClick={() => setSelectedTeam('Away')} className={`w-full p-3 lg:p-4 font-black text-lg lg:text-xl border-b text-center truncate hover:bg-red-50 ${selectedTeam === 'Away' ? 'bg-red-100 text-red-800' : 'text-red-600'}`}>{metadata.awayTeam.name}</button>
                      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
-                        {metadata.awayTeam.roster.map(p => {
-                            const isUsed = (Object.values(lineup.away) as (Player|null)[]).some(lp => lp?.id === p.id);
-                            return (
-                                <div key={p.id} className={`p-1.5 lg:p-2 rounded flex items-center gap-2 lg:gap-4 border h-11 lg:h-14 ${isUsed ? 'opacity-40 bg-slate-100' : 'bg-white border-red-100'}`}>
-                                    <div className="w-8 h-8 lg:w-10 lg:h-10 rounded bg-red-600 text-white flex items-center justify-center font-black shrink-0 text-base lg:text-xl">{p.number}</div>
-                                    <div className="font-bold text-slate-700 truncate text-sm lg:text-xl flex-1 hidden md:block">{p.name}</div>
-                                </div>
-                            );
-                        })}
+                        {metadata.awayTeam.roster.map((p: Player) => (
+                            <button key={p.id} onClick={() => setSelectedPlayerId(p.id)} className={`w-full p-1.5 lg:p-2 rounded flex items-center gap-2 lg:gap-4 border h-11 lg:h-14 hover:bg-slate-50 ${selectedPlayerId === p.id ? 'bg-red-50 border-red-500 ring-2 ring-red-200' : 'bg-white border-red-100'}`}>
+                                <div className="w-8 h-8 lg:w-10 lg:h-10 rounded bg-red-600 text-white flex items-center justify-center font-black shrink-0 text-base lg:text-xl">{p.number}</div>
+                                <div className="font-bold text-slate-700 truncate text-sm lg:text-xl flex-1 hidden md:block">{p.name}</div>
+                            </button>
+                        ))}
                      </div>
                  </div>
             </div>

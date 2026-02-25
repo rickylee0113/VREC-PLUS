@@ -26,12 +26,13 @@ interface CourtMapProps {
   topWatermark?: string;
   bottomWatermark?: string;
   trajectoryMode?: boolean; 
+  gridMode?: boolean;
 }
 
 const CourtMap: React.FC<CourtMapProps> = ({ 
     label, selectedZone, onCoordinateSelect, onTrajectorySelect, onStartPointChange, onEndPointChange, colorClass = "bg-orange-100", 
     compact = false, heatmapPoints, trajectories, pendingTrajectory, startPoint, netPosition = 'bottom', 
-    watermark, topWatermark, bottomWatermark, trajectoryMode = false 
+    watermark, topWatermark, bottomWatermark, trajectoryMode = false, gridMode = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDraggingStart, setIsDraggingStart] = useState(false);
@@ -40,6 +41,44 @@ const CourtMap: React.FC<CourtMapProps> = ({
   
   // Ref to store the offset between mouse click position and the actual center of the object
   const dragOffsetRef = useRef<{x: number, y: number}>({ x: 0, y: 0 });
+
+  // --- Grid Calculation Logic ---
+  const X_BOUNDS = [0, 10, 36.66, 63.33, 90, 100];
+  const Y_BOUNDS = [0, 10, 36.66, 63.33, 90, 100];
+  
+  const gridData = React.useMemo(() => {
+      if (!gridMode || !heatmapPoints) return null;
+      
+      const counts = Array(5).fill(0).map(() => Array(5).fill(0));
+      let total = 0;
+
+      heatmapPoints.forEach(pt => {
+          let c = -1;
+          for(let i=0; i<5; i++) {
+              if (pt.x >= X_BOUNDS[i] && pt.x < X_BOUNDS[i+1]) { c = i; break; }
+          }
+          let r = -1;
+          for(let i=0; i<5; i++) {
+              if (pt.y >= Y_BOUNDS[i] && pt.y < Y_BOUNDS[i+1]) { r = i; break; }
+          }
+
+          if (c !== -1 && r !== -1) {
+              counts[r][c]++;
+              total++;
+          }
+      });
+
+      return { counts, total };
+  }, [gridMode, heatmapPoints]);
+
+  const getGridColor = (pct: number) => {
+      if (pct === 0) return 'rgba(255,255,255,0.1)';
+      if (pct < 5) return 'rgba(254, 240, 138, 0.4)'; // Yellow-200
+      if (pct < 10) return 'rgba(253, 224, 71, 0.5)'; // Yellow-300
+      if (pct < 20) return 'rgba(250, 204, 21, 0.6)'; // Yellow-400
+      if (pct < 30) return 'rgba(251, 146, 60, 0.6)'; // Orange-400
+      return 'rgba(248, 113, 113, 0.7)'; // Red-400
+  };
 
   const getPercentage = (e: React.MouseEvent | MouseEvent) => {
       if (!containerRef.current) return { x: 0, y: 0 };
@@ -240,6 +279,35 @@ const CourtMap: React.FC<CourtMapProps> = ({
              </div>
         )}
 
+        {/* Grid Overlay */}
+        {gridMode && gridData && (
+            <div className="absolute inset-0 z-10 pointer-events-none">
+                {gridData.counts.map((row, r) => row.map((count, c) => {
+                    const pct = gridData.total > 0 ? Math.round((count / gridData.total) * 100) : 0;
+                    const left = X_BOUNDS[c];
+                    const width = X_BOUNDS[c+1] - X_BOUNDS[c];
+                    const top = Y_BOUNDS[r];
+                    const height = Y_BOUNDS[r+1] - Y_BOUNDS[r];
+
+                    return (
+                        <div
+                            key={`${r}-${c}`}
+                            className="absolute flex items-center justify-center border border-slate-500/30 text-[10px] md:text-sm font-black text-slate-800 transition-colors duration-300"
+                            style={{
+                                left: `${left}%`,
+                                top: `${top}%`,
+                                width: `${width}%`,
+                                height: `${height}%`,
+                                backgroundColor: getGridColor(pct)
+                            }}
+                        >
+                            {pct > 0 ? `${pct}%` : ''}
+                        </div>
+                    );
+                }))}
+            </div>
+        )}
+
         {/* SVG Layer for Trajectories and Interactive Elements */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible z-20">
             <defs>
@@ -377,7 +445,7 @@ const CourtMap: React.FC<CourtMapProps> = ({
              <div className="absolute inset-0 pointer-events-none bg-orange-500/10 z-0"></div>
         )}
 
-        {heatmapPoints && heatmapPoints.map((pt, idx) => (
+        {heatmapPoints && !gridMode && heatmapPoints.map((pt, idx) => (
             <div 
                 key={idx}
                 className={`absolute rounded-full border border-white shadow-sm pointer-events-none z-20 ${getPointColor(pt.result)}`}
