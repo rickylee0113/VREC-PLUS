@@ -543,7 +543,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
             <div className="flex-1 overflow-hidden flex">
                 {/* Left Roster (Home) */}
                 <div className="w-64 bg-white border-r flex flex-col overflow-y-auto">
-                    <button onClick={() => setSelectedTeam('Home')} className={`p-4 font-black text-lg border-b text-center hover:bg-blue-50 ${selectedTeam === 'Home' ? 'bg-blue-100 text-blue-800' : 'text-blue-600'}`}>{metadata.homeTeam.name}</button>
+                    <button onClick={() => { setSelectedTeam('Home'); setSelectedPlayerId(null); }} className={`p-3 lg:p-4 font-black text-lg lg:text-xl border-b text-center hover:bg-blue-50 ${selectedTeam === 'Home' ? 'bg-blue-100 text-blue-800' : 'text-blue-600'}`}>{metadata.homeTeam.name}</button>
                     {metadata.homeTeam.roster.map((p: Player) => (
                         <button key={p.id} onClick={() => setSelectedPlayerId(p.id)} className={`p-3 border-b flex items-center gap-3 hover:bg-slate-50 ${selectedPlayerId === p.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}>
                             <span className="w-8 h-8 rounded bg-blue-600 text-white flex items-center justify-center font-bold text-sm">{p.number}</span>
@@ -802,7 +802,7 @@ const StatsDashboard = ({ metadata, events, onClose, currentScore, lineup }: any
 
                 {/* Right Roster (Away) - Responsive Width */}
                 <div className="w-20 md:w-48 lg:w-56 xl:w-80 bg-white border-l flex flex-col shrink-0 transition-all duration-300">
-                     <button onClick={() => setSelectedTeam('Away')} className={`w-full p-3 lg:p-4 font-black text-lg lg:text-xl border-b text-center truncate hover:bg-red-50 ${selectedTeam === 'Away' ? 'bg-red-100 text-red-800' : 'text-red-600'}`}>{metadata.awayTeam.name}</button>
+                     <button onClick={() => { setSelectedTeam('Away'); setSelectedPlayerId(null); }} className={`w-full p-3 lg:p-4 font-black text-lg lg:text-xl border-b text-center truncate hover:bg-red-50 ${selectedTeam === 'Away' ? 'bg-red-100 text-red-800' : 'text-red-600'}`}>{metadata.awayTeam.name}</button>
                      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
                         {metadata.awayTeam.roster.map((p: Player) => (
                             <button key={p.id} onClick={() => setSelectedPlayerId(p.id)} className={`w-full p-1.5 lg:p-2 rounded flex items-center gap-2 lg:gap-4 border h-11 lg:h-14 hover:bg-slate-50 ${selectedPlayerId === p.id ? 'bg-red-50 border-red-500 ring-2 ring-red-200' : 'bg-white border-red-100'}`}>

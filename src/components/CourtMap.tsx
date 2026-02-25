@@ -43,13 +43,17 @@ const CourtMap: React.FC<CourtMapProps> = ({
   const dragOffsetRef = useRef<{x: number, y: number}>({ x: 0, y: 0 });
 
   // --- Grid Calculation Logic ---
+  // Vertical Layout (Portrait)
+  // 5 Columns: OutL, Left, Mid, Right, OutR
+  // 8 Rows: OutT, T3, T2, T1, B1, B2, B3, OutB (T=Top, B=Bottom, 1=Near Net)
+  
   const X_BOUNDS = [0, 10, 36.66, 63.33, 90, 100];
-  const Y_BOUNDS = [0, 10, 36.66, 63.33, 90, 100];
+  const Y_BOUNDS = [0, 10, 23.33, 36.66, 50, 63.33, 76.66, 90, 100];
   
   const gridData = React.useMemo(() => {
       if (!gridMode || !heatmapPoints) return null;
       
-      const counts = Array(5).fill(0).map(() => Array(5).fill(0));
+      const counts = Array(8).fill(0).map(() => Array(5).fill(0));
       let total = 0;
 
       heatmapPoints.forEach(pt => {
@@ -57,8 +61,9 @@ const CourtMap: React.FC<CourtMapProps> = ({
           for(let i=0; i<5; i++) {
               if (pt.x >= X_BOUNDS[i] && pt.x < X_BOUNDS[i+1]) { c = i; break; }
           }
+          
           let r = -1;
-          for(let i=0; i<5; i++) {
+          for(let i=0; i<8; i++) {
               if (pt.y >= Y_BOUNDS[i] && pt.y < Y_BOUNDS[i+1]) { r = i; break; }
           }
 
@@ -219,11 +224,11 @@ const CourtMap: React.FC<CourtMapProps> = ({
         onClick={handleContainerClick}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className={`relative w-full flex-1 min-h-0 bg-slate-400 cursor-crosshair overflow-hidden flex flex-col border border-slate-500 shadow-inner select-none`}
+        className={`relative w-full flex-1 min-h-0 bg-teal-500 cursor-crosshair overflow-hidden flex flex-col border border-slate-500 shadow-inner select-none`}
       >
         
         {/* Inner Court Area (80% Size) */}
-        <div className={`absolute top-[10%] bottom-[10%] left-[10%] right-[10%] bg-orange-100 border-4 border-white shadow-xl z-0 box-content`}>
+        <div className={`absolute top-[10%] bottom-[10%] left-[10%] right-[10%] bg-orange-400 border-4 border-white shadow-xl z-0 box-content`}>
             {/* Watermarks */}
             {watermark && !topWatermark && !bottomWatermark && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
@@ -260,12 +265,16 @@ const CourtMap: React.FC<CourtMapProps> = ({
                 {isNetCenter ? (
                     <>
                         <div className="absolute top-[50%] w-full h-1 bg-slate-800"></div> {/* Center Net Line */}
-                        <div className="absolute top-[33.33%] w-full h-px bg-slate-800 dashed"></div> {/* Attack Line Top */}
-                        <div className="absolute top-[66.66%] w-full h-px bg-slate-800 dashed"></div> {/* Attack Line Bottom */}
+                        {!gridMode && (
+                            <>
+                                <div className="absolute top-[33.33%] w-full h-px bg-slate-800 dashed"></div> {/* Attack Line Top */}
+                                <div className="absolute top-[66.66%] w-full h-px bg-slate-800 dashed"></div> {/* Attack Line Bottom */}
+                            </>
+                        )}
                     </>
                 ) : (
                     <>
-                        <div className={`absolute w-full h-px bg-slate-800 ${isNetTop ? 'top-[33.33%]' : 'bottom-[33.33%]'}`}></div>
+                        {!gridMode && <div className={`absolute w-full h-px bg-slate-800 ${isNetTop ? 'top-[33.33%]' : 'bottom-[33.33%]'}`}></div>}
                     </>
                 )}
                 <div className="absolute left-[33.33%] h-full w-px bg-slate-800"></div>
@@ -274,8 +283,10 @@ const CourtMap: React.FC<CourtMapProps> = ({
         </div>
 
         {/* Visual Net */}
-        {isNetCenter && (
-             <div className="absolute top-[50%] left-[5%] right-[5%] h-2 bg-slate-900 z-10 shadow-md flex items-center justify-center -translate-y-1/2 rounded-full pointer-events-none">
+        {gridMode ? (
+             <div className="absolute left-[10%] right-[10%] top-[50%] h-1 bg-black z-30 pointer-events-none"></div>
+        ) : isNetCenter && (
+             <div className="absolute top-[50%] left-[5%] right-[5%] h-2 bg-slate-900 z-30 shadow-md flex items-center justify-center -translate-y-1/2 rounded-full pointer-events-none">
              </div>
         )}
 
@@ -289,18 +300,55 @@ const CourtMap: React.FC<CourtMapProps> = ({
                     const top = Y_BOUNDS[r];
                     const height = Y_BOUNDS[r+1] - Y_BOUNDS[r];
 
+                    // Determine if this is an "Out" zone (Top or Bottom rows)
+                    const isOutTop = r === 0;
+                    const isOutBottom = r === 7;
+                    const isOutZone = isOutTop || isOutBottom;
+                    
+                    // Determine if this is Side Out (Left or Right cols)
+                    const isSideOutLeft = c === 0;
+                    const isSideOutRight = c === 4;
+                    const isSideOut = isSideOutLeft || isSideOutRight;
+
+                    // Text Color
+                    let textColor = 'text-red-900';
+                    if (isSideOutLeft) textColor = 'text-blue-700';
+                    if (isSideOutRight) textColor = 'text-red-700';
+                    if (isOutTop) textColor = 'text-blue-700'; // Assuming top is Home/Blue?
+                    if (isOutBottom) textColor = 'text-red-700'; // Assuming bottom is Away/Red?
+
+                    // Border Styles
+                    const borderColor = 'white';
+                    const borderWidth = '2px';
+
+                    // Background: Only for Court Area (Not Out Zones)
+                    // Court Area is r=1..6 AND c=1..3
+                    const isCourt = (r >= 1 && r <= 6) && (c >= 1 && c <= 3);
+                    const bgColor = isCourt ? getGridColor(pct) : 'transparent';
+
+                    // Borders Logic: Only show borders for the Court Area
+                    const borderTop = isCourt ? (r === 1 ? 'none' : `${borderWidth} solid ${borderColor}`) : 'none';
+                    const borderBottom = isCourt ? `${borderWidth} solid ${borderColor}` : 'none';
+                    const borderLeft = isCourt ? (c === 1 ? `${borderWidth} solid ${borderColor}` : 'none') : 'none';
+                    const borderRight = isCourt ? `${borderWidth} solid ${borderColor}` : 'none';
+
                     return (
                         <div
                             key={`${r}-${c}`}
-                            className="absolute flex items-center justify-center border border-slate-500/30 text-[10px] md:text-sm font-black text-slate-800 transition-colors duration-300"
+                            className={`absolute flex items-center justify-center text-[10px] md:text-sm font-black transition-colors duration-300 ${textColor}`}
                             style={{
                                 left: `${left}%`,
                                 top: `${top}%`,
                                 width: `${width}%`,
                                 height: `${height}%`,
-                                backgroundColor: getGridColor(pct)
+                                backgroundColor: bgColor,
+                                borderTop,
+                                borderBottom,
+                                borderLeft,
+                                borderRight
                             }}
                         >
+                            {/* Only show percentage if > 0 */}
                             {pct > 0 ? `${pct}%` : ''}
                         </div>
                     );
