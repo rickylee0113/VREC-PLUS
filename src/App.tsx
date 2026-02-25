@@ -1579,7 +1579,7 @@ const VolleyTagApp: React.FC<{ onResetApp: () => void, user: User, onLogout: () 
       {showSubModal && <SubstitutionModal team={subTeam} lineup={lineup} metadata={metadata} onClose={()=>setShowSubModal(false)} onConfirm={handleSubstitution} />}
       {showLogModal && <LogModal events={events} metadata={metadata} onClose={() => setShowLogModal(false)} onDelete={handleDeleteEvent} />}
       {resetModalOpen && <ResetModal onConfirm={onResetApp} onCancel={() => setResetModalOpen(false)} />}
-      {phase === 'stats' && <StatsDashboard metadata={metadata} events={events} score={score} onClose={() => setPhase('recording')} />}
+      {phase === 'stats' && <StatsDashboard metadata={metadata} events={events} currentScore={score} lineup={lineup} onClose={() => setPhase('recording')} />}
 
       {/* Header */}
       <header className="bg-slate-900 text-white p-3 shadow-md flex justify-between items-center z-50 shrink-0">
